@@ -30,8 +30,9 @@ key3 <- name_suggest(q='Carassius carassius', rank='species')$key[1]
 
 # Get callback key from GBIF API and construct download url. 
 # set user_name, e-mail, and pswd as global options first
-options(gbif_user='andersfi')
-options(gbif_email='anders.finstad@ntnu.no')
+# NB: modify if not running through rstudio
+options(gbif_user=rstudioapi::askForPassword("my gbif username"))
+options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))
 options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))
 
 # Get download key. NB! Maximum of 3 download request handled simultaniusly
