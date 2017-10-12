@@ -1,14 +1,12 @@
 ###############################################################################
-# Import GBIF dataset
+# Search, download and parse occurrence data from GBIF
 ###############################################################################
 
 # procedure
-# a) download dataset 
-# b) restrurcture and rename to NOFA standard (used DH engine?)
-# c) filter out records already in NOFA (check for duplicated occurrenceIDs - or - importID)
-# d) download to temporary table in NOFA
-# e) create spatial column from lat/long and match spatially to waterbodyID in lake table (SQL)
-# f) import temporary table to NOFA tables (insert) (SQL) (same script as used for batch imports)
+# a) Find species 
+# b) Construct quiery and request download key
+# c) Download and save data
+# d) Create data.frame
 
 #------------------------------------------------------------------------------
 # Load libraries -----
@@ -17,7 +15,6 @@ library(rgbif)
 library(stringr)
 library(rio)
 library(dplyr)
-library(RPostgreSQL)
 
 #------------------------------------------------------------------------------
 # Asyncronous download using the rgibf package  -----------------------------------
