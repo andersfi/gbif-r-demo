@@ -1,2 +1,2 @@
 # gbif-r-demo
-Download and use GBIF by R
+Demoscripts for download and use GBIF by R (in progress)
