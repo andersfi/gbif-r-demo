@@ -1,0 +1,117 @@
+---
+title: "EPT samples from "
+author: "Anders G. Finstad"
+date: "January 14, 2021"
+output: html_document
+---
+
+```{r libraries, include=TRUE}
+library(rio) # convinience package for data import into R
+library(dplyr)
+library(ggplot2)
+library(mapview) # for plotting interactive maps
+library(sf) # spatial package 
+
+```
+
+
+# Download data and extract occurrence file from DWC-A
+
+The data are pre-selected and download-link created on gbif.org. Here we are using the dataset origin from the aquatic insect database from NTNU-VM, selecting out Plecoptera, Ephemorptera, Tricoptera and geospatially constraining the data to be within https://gadm.org/ area NOR.9_1 and NOR.15_1 (North and South Trøndelag). Data download citation GBIF.org (14 January 2021) GBIF Occurrence Download https://doi.org/10.15468/dl.ucf2ch. Direct download is available at the following address:
+https://api.gbif.org/v1/occurrence/download/request/0155611-200613084148143.zip
+
+```{r data_download, include=TRUE}
+# note the use of tmpfile and tmpdir in order not to clogg your local hardrive or gitrepro wirth large files
+
+download_url <- "https://api.gbif.org/v1/occurrence/download/request/0155611-200613084148143.zip"
+tmpfile <- tempfile()
+tmpdir <- tempdir()
+download.file(download_url,tmpfile)
+occurrences <- rio::import(unzip(tmpfile,files="occurrence.txt",exdir = tmpdir)) # on the fly unzip and import to R object 
+
+```
+
+# Restructure data and generate spatial enabled dataframe 
+
+* Subset on a restricted number of variables (the download file contains `r dim(occurrences)[2]` variables)
+* Coarce down (group_by) to sampling stations (identified by coordinate)
+* Define a set of new variables for each sampling station (first sampling year, last sampling year, number of methods employd, number of occurrences, number of taxa etc.. )
+* Create a new spatial enabled dataframe from the resulting table. NB: GBIF data comes with lat/long in wgs84 (crs = 4326). See https://datacarpentry.org/organization-geospatial/03-crs/ for more info on coordinate reference systems. By the way, the whole cource on datacarpentry on geospatial concepts is quite a good introduction (https://datacarpentry.org/organization-geospatial/)
+
+Note that we do these operations in separate calls in the code-chunc below. It could have been put into one long pipe, but that would proably be less transparent. 
+
+```{r restructure, include=TRUE}
+
+# first subset data
+occ_tmp <- occurrences %>% 
+  dplyr::select(occurrenceID, eventID, 
+                locality,decimalLatitude,decimalLongitude,datasetID,collectionCode,
+                taxonID,scientificName,order,family,genus,
+                eventDate,year,month,day, 
+                samplingProtocol, samplingEffort,sampleSizeValue,sampleSizeUnit,
+                individualCount,organismQuantity,organismQuantityType,
+                occurrenceRemarks)
+
+# create a dataframe where each row is one locaton (based upon lat/long)
+locations <- occurrences %>% 
+  dplyr::group_by(locality,decimalLatitude,decimalLongitude) %>%
+  summarize(N_samplingEvents = length(unique(eventID)),
+            N_taxa = length(unique(scientificName)),
+            N_methods = length(unique(samplingProtocol)),
+            methods = paste0(unique(samplingProtocol),sep="|"),
+            N_yrs = length(unique(year)),
+            first_year = min(year),
+            last_year = max(year),
+            period_yrs = last_year - first_year)
+
+# make location data-frame a spatial object 
+loc_sf = st_as_sf(locations, coords = c("decimalLongitude","decimalLatitude"), 
+                  crs = 4326)
+
+```
+
+# Interactive maps
+
+Create an interactive map to browse data. One-shop-stop command to this using mapview. Not as rich in fetures as some other pacages, but very easy in use. Change colouring to whatever parameter you want by changing the "zcol" argument.
+
+```{r interactive_map, include=TRUE}
+mapview(loc_sf,zcol="period_yrs")
+
+```
+
+
+# Map for print
+
+Sligthly different approach for producing maps for print, here using ggplot
+
+```{r static_map, include=TRUE}
+
+# filter to get the subset of data you want to display in the map 
+loc_sf_to_plot <- loc_sf %>% # exampel, display only data from before 1990
+  filter(first_year<1990)
+
+# get background data (adminstrative borders) from https://gadm.org/ 
+tmp_gadm <- tempfile(pattern = "gadm", fileext = ".rds")
+download.file("https://biogeo.ucdavis.edu/data/gadm3.6/Rsf/gadm36_NOR_1_sf.rds", tmp_gadm)
+gadm <- readRDS(tmp_gadm)
+gadm_trondelag <- gadm %>% 
+  filter(GID_1 == "NOR.9_1" | GID_1 == "NOR.15_1")
+  
+# plot the map, filter on approapriate variable
+# example code for styling scrapped from https://www.r-spatial.org/r/2018/10/25/ggplot2-sf.html and https://www.datanovia.com/en/blog/ggplot-theme-background-color-and-grids/
+ggplot() + 
+  geom_sf(data=gadm_trondelag) + # add polygons for adm area (background)
+  geom_sf(data=loc_sf_to_plot, aes(colour=first_year)) + # add sampling locations and then style background
+  theme(
+    panel.background = element_rect(fill = "#FFFFFF", colour = "#000000",
+                                size = 1, linetype = "solid"),
+    panel.grid.major = element_line(size = 0.2, linetype = "solid",
+                                colour = "#808080")
+  )
+
+
+
+
+```
+
+
