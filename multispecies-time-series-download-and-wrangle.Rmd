@@ -1,0 +1,52 @@
+---
+title: "jonssvatnet microcrustacean time-series"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(sf)
+library(mapview)
+```
+
+# Download and wrangle the Jonsvatnet zooplankton time-series from GBIF
+
+The dataset is part of the "Liminic freswhater pelagic collection" published in the dataset [Limnic freshwater pelagic invertebrates biogeographical mapping/inventory NTNU University Museum](https://www.gbif.org/dataset/edd9b710-f3bb-4c49-9fa5-724cd4ecfc7d)
+
+The zooplankton time-series from lake Jonsvatnet is selected based upon geograpic locations of the sampling stations. See the [download page](https://doi.org/10.15468/dl.m55nyd) for details on search parameters. 
+
+Description of the time-series (in Norwegian) given in NTNU University Museum reports - [latest from 2019](https://www.ntnu.no/documents/10476/1291996359/2020-4+Notat+Jonsvatnet+2019.pdf/01effd35-2707-bf15-d684-1c24535dfb69?t=1601285434082)
+
+## Download data 
+
+```{r download, include=FALSE}
+
+download_url <- "https://api.gbif.org/v1/occurrence/download/request/0239745-200613084148143.zip"
+
+temp <- tempfile()
+download.file(url=download_url, destfile=temp,quiet=FALSE)
+data <- read.table(unzip(temp, "occurrence.txt"),sep="\t",header=T)
+
+```
+
+# Preliminary data investigation 
+Have a look at the data broken down on sampling stations, dates, number of sampling events and sampling protocol. 
+
+```{r data-investigation, include=FALSE}
+data_overview <- data %>% 
+  select(taxonKey,eventDate,fieldNumber,year,eventID,samplingProtocol,
+         locality,locationID,decimalLatitude,decimalLongitude)
+
+data_overview_table <- data_overview %>%
+  
+
+map_data <- data_overview %>%
+  select(locality,locationID,decimalLatitude,decimalLongitude) %>%
+  group_by(locality,locationID,decimalLatitude,decimalLongitude) %>%
+  summarise()
+map_data_sf = st_as_sf(map_data, coords = c("decimalLongitude", "decimalLatitude"), 
+                 crs = 4326)
+
+mapview(map_data_sf)
+
+```
