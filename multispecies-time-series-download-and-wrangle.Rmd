@@ -34,16 +34,15 @@ Have a look at the data broken down on sampling stations, dates, number of sampl
 
 ```{r data-investigation, include=FALSE}
 data_overview <- data %>% 
-  select(taxonKey,eventDate,fieldNumber,year,eventID,samplingProtocol,
+  dplyr::select(taxonKey,eventDate,fieldNumber,year,eventID,samplingProtocol,
          locality,locationID,decimalLatitude,decimalLongitude)
-
-data_overview_table <- data_overview %>%
   
 
 map_data <- data_overview %>%
-  select(locality,locationID,decimalLatitude,decimalLongitude) %>%
-  group_by(locality,locationID,decimalLatitude,decimalLongitude) %>%
-  summarise()
+  dplyr::select(locality,locationID,decimalLatitude,decimalLongitude,year,taxonKey) %>%
+  dplyr::group_by(locality,locationID,decimalLatitude,decimalLongitude,year) %>%
+  dplyr::summarise(n_observations = n(),
+                   n_taxa = length(unique(taxonKey)))
 map_data_sf = st_as_sf(map_data, coords = c("decimalLongitude", "decimalLatitude"), 
                  crs = 4326)
 
